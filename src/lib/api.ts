@@ -1,0 +1,59 @@
+/**
+ * @file client-api.ts
+ * @description
+ * Client-side utilities for interacting with the backend API routes.
+ * 
+ * - `extractText(file: File)` uploads a file and retrieves its extracted text.
+ * - `createEvents(text: string)` sends syllabus text for event extraction.
+ */
+export async function extractText(file: File) {
+  const formdata = new FormData();
+  formdata.append("file", file);
+
+  const res = await fetch(`/api/extract`, {
+    method: "POST",
+    body: formdata,
+  });
+
+  if (!res.ok) throw new Error("Upload failed");
+
+  const data = await res.json();
+
+  if (data.error) {
+    console.error(data.error || "Something went wrong");
+  }
+
+  return data;
+}
+
+/**
+ * Send syllabus text to the `/api/create-events` endpoint
+ * to generate structured syllabus events using Gemini.
+ *
+ * @param text - The raw syllabus text to be processed.
+ * @returns {Promise<any>} JSON response containing extracted events or error details.
+ *
+ * Example:
+ * ```ts
+ * const syllabusText = "Week 1: Case Brief due 2025-09-10";
+ * const events = await createEvents(syllabusText);
+ * console.log(events);
+ * ```
+ */
+export const createEvents = async (text: string) => {
+  const formdata = new FormData();
+  formdata.append("text", text);
+
+  const res = await fetch(`/api/create-events`, {
+    method: "POST",
+    body: formdata,
+  });
+
+  const data = await res.json();
+
+  if (data.error) {
+    console.error(data.error || "Something went wrong");
+  }
+
+  return data;
+};
