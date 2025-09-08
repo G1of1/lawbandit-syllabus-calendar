@@ -53,7 +53,23 @@ export const createEvents = async (text: string) => {
 
   if (data.error) {
     console.error(data.error || "Something went wrong");
+    return;
   }
 
   return data;
 };
+
+export const addEventToGoogleCalendar = async (events: any[]) => {
+  const res = await fetch('api/calendar', {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(events),
+  })
+  const data = await res.json();
+
+  if(data.error) {
+    console.error(data.error || 'Something went wrong');
+    return;
+  }
+  return data;
+}
