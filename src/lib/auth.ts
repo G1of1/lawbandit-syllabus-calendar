@@ -24,7 +24,9 @@ export const authOptions: AuthOptions = {
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-        token.expiresAt = Date.now() + account.expires_at * 1000;
+        // ✅ Google gives expires_at in seconds since epoch
+        token.expiresAt = account.expires_at * 1000;
+        return token;
       }
 
       // Return previous token if still valid
@@ -51,6 +53,8 @@ export const authOptions: AuthOptions = {
 
         token.accessToken = refreshed.access_token;
         token.expiresAt = Date.now() + refreshed.expires_in * 1000;
+        // ✅ Keep the same refresh token if Google didn’t return a new one
+        token.refreshToken = refreshed.refresh_token ?? token.refreshToken;
 
         return token;
       } catch (error) {

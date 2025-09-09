@@ -1,3 +1,6 @@
+import { getSession } from "next-auth/react";
+import { toast } from "sonner";
+
 /**
  * @file client-api.ts
  * @description
@@ -14,13 +17,19 @@ export async function extractText(file: File) {
     method: "POST",
     body: formdata,
   });
-
-  if (!res.ok) throw new Error("Upload failed");
-
   const data = await res.json();
 
   if (data.error) {
-    console.error(data.error || "Something went wrong");
+    console.error(data.error);
+    toast("Error",{
+      description: data.error as string,
+      duration: 7000,
+      action: {
+        label: "Close",
+        onClick: ()=> console.log()
+      }
+    })
+    return;
   }
 
   return data;
@@ -52,24 +61,67 @@ export const createEvents = async (text: string) => {
   const data = await res.json();
 
   if (data.error) {
-    console.error(data.error || "Something went wrong");
+    console.error(data.error);
+    toast("Error",{
+      description: data.error as string,
+      duration: 7000,
+      action: {
+        label: "Close",
+        onClick: ()=> console.log()
+      }
+    })
     return;
   }
 
   return data;
 };
 
-export const addEventToGoogleCalendar = async (events: any[]) => {
-  const res = await fetch('api/calendar', {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(events),
-  })
-  const data = await res.json();
 
-  if(data.error) {
-    console.error(data.error || 'Something went wrong');
-    return;
+export const addEventToGoogleCalendar = async (events: any[]) => {
+  let session = await getSession();
+
+  if (!session?.accessToken) {
+    throw new Error("No access token available");
   }
-  return data;
-}
+
+  const postEvents = async (accessToken: string) => {
+    const res = await fetch("/api/calendar", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(events),
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      toast("Error",{
+      description: data.error as string,
+      duration: 7000,
+      action: {
+        label: "Close",
+        onClick: ()=> console.log()
+      }
+    })
+    }
+    return data;
+  };
+
+  try {
+    // 1️⃣ First attempt
+    return await postEvents(session.accessToken);
+  } catch (err: any) {
+    if (err.message.includes("Invalid Credentials") || err.message.includes("401")) {
+      console.warn("Access token expired, retrying with refreshed session…");
+      // 2️⃣ Force a session refresh from NextAuth
+      session = await getSession();
+      if (!session?.accessToken) {
+        throw new Error("Failed to refresh access token");
+      }
+      return await postEvents(session.accessToken);
+    }
+    throw err;
+  }
+};
+
