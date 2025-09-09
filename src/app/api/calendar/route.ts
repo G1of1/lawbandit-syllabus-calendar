@@ -9,7 +9,6 @@ export async function POST(req: Request) {
   if (!session) return  NextResponse.json("Unauthorized", { status: 401 });
   try{
     const accessToken = (session as any).accessToken;
-    console.log(session);
   const events = await req.json(); // JSON array from Gemini
 
   const created = await createEvents(accessToken, events);
