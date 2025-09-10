@@ -1,6 +1,5 @@
-import { AuthOptions } from "next-auth";
+import { Account, AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { JWT } from "next-auth/jwt";
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -19,13 +18,13 @@ export const authOptions: AuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, account }: { token: JWT; account?: any }) {
+    async jwt({ token, account }) {
       // Initial sign in
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         // ✅ Google gives expires_at in seconds since epoch
-        token.expiresAt = account.expires_at * 1000;
+        token.expiresAt = account.expires_at ? account.expires_at * 1000 : undefined;
         return token;
       }
 

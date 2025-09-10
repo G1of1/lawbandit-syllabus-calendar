@@ -1,4 +1,3 @@
-import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 import { SessionProvider as Provider } from "@/providers/SessionProvider";
 import { Toaster } from "../components/ui/sonner";

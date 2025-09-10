@@ -1,5 +1,6 @@
+import { Task } from "@/types/type";
 import { getSession } from "next-auth/react";
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
 /**
  * @file client-api.ts
@@ -77,7 +78,7 @@ export const createEvents = async (text: string) => {
 };
 
 
-export const addEventToGoogleCalendar = async (events: any[]) => {
+export const addEventToGoogleCalendar = async (events: Task[]) => {
   let session = await getSession();
 
   if (!session?.accessToken) {

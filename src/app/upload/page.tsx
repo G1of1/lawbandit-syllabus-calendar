@@ -7,25 +7,22 @@ import { addEventToGoogleCalendar, createEvents, extractText } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Loader2, Upload, CalendarPlus, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { Task } from "@/types/type";
 
 
 export default function UploadPage() {
   const { data: session } = useSession();
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [error, setError] = useState("");
   const [calendarMessage, setCalendarMessage] = useState("");
   const [calendarLink, setCalendarLink] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [fileAlert, setFileAlert] = useState<string | null>(null);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (e.target.files?.[0]) {
     const file = e.target.files[0];
     setFile(file);
-    setFileAlert(`File Name: ${file.name}`);
-
     toast("📂 File Uploaded", {
       description: file.name,
       action: {
@@ -43,7 +40,18 @@ export default function UploadPage() {
     setCalendarMessage("");
     setCalendarLink(null);
     try {
-      if (!file) return;
+      if (!file) {
+        toast("Error ❌", {
+          description: 'No file provided',
+          duration: 5000,
+          action: {
+            label: "Close",
+            onClick: ()=> console.log()
+          }
+        })
+        return;
+      }
+        
       const text = await extractText(file as File);
       if (!text) return;
       const tasks = await createEvents(text);
@@ -90,14 +98,14 @@ export default function UploadPage() {
             Upload Your Syllabus
           </h1>
           <p className="text-gray-400 text-sm">
-            Upload your PDF, DOCX, or image syllabus. AI will extract important
+            Upload your PDF or DOCX file. AI will extract important
             dates and tasks, and you can sync them with Google Calendar.
           </p>
 
           <input
             type="file"
             name="file"
-            accept=".pdf,.docx,image/*"
+            accept=".pdf,.docx"
             className="block w-full rounded-full border border-gray-600 bg-[#2a2725] p-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-blue-500"
             onChange={handleFileChange}
           />

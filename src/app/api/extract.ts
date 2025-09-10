@@ -12,6 +12,7 @@
 import pdf from "pdf-parse";
 import mammoth from "mammoth";
 import Tesseract from "tesseract.js";
+import { toast } from "sonner";
 
 /**
  * Extract text from a PDF buffer using `pdf-parse`.
@@ -71,8 +72,8 @@ export interface UploadedFile {
 export async function textExtractor(file: UploadedFile): Promise<string> {
   const { buffer, mimetype, originalname } = file;
 
-  // Handle PDF files
-  if (mimetype === "application/pdf" || originalname.endsWith(".pdf")) {
+  try {
+    if (mimetype === "application/pdf" || originalname.endsWith(".pdf")) {
     return await extractTextFromPDF(buffer);
   }
 
@@ -89,7 +90,19 @@ export async function textExtractor(file: UploadedFile): Promise<string> {
   if (mimetype.startsWith("image/")) {
     return await extractTextFromImage(buffer);
   }
-
+  }
+  catch(error: any) {
+    console.error(error as string);
+    toast("Error",{
+    description: `Unsupported file type: ${mimetype}`,
+    duration: 7000,
+    action: {
+        label: "Close",
+        onClick: ()=> console.log()
+      }
+  })
+  }  
   // Fallback for unsupported formats
   throw new Error(`Unsupported file type: ${mimetype}`);
+
 }

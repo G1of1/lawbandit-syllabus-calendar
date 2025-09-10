@@ -1,40 +1,8 @@
 // /app/api/extract/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { textExtractor } from "../extract";
-
-/**
- * API Route: /api/extract
- *
- * This endpoint accepts a file upload (PDF, DOCX, or image),
- * extracts its text content using the `textExtractor` utility,
- * and returns the raw extracted text.
- *
- * Supported file types depend on the implementation of `textExtractor`
- * (e.g., pdf-parse for PDFs, mammoth for DOCX, Tesseract for images).
- *
- * ---
- * Example Request:
- * POST /api/extract
- * Content-Type: multipart/form-data
- *
- * file=<uploaded_file>
- *
- * Example Success Response (200 OK):
- * {
- *   "text": "Week 1: Read Chapter 1 and submit case brief..."
- * }
- *
- * Example Error Response (400 Bad Request):
- * {
- *   "error": "No file uploaded"
- * }
- *
- * Example Error Response (500 Server Error):
- * {
- *   "error": "Server Error: Failed to process file"
- * }
- */
+import pdf from "pdf-parse";
+import mammoth from "mammoth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,18 +16,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Convert the uploaded file into a Node.js Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Create a file-like object for the extractor
-    const uploadedFile = {
-      buffer,
-      mimetype: file.type,
-      originalname: file.name,
-    };
+    let text = "";
 
-    // Use the text extractor utility to extract plain text
-    const text = await textExtractor(uploadedFile);
+      if (file.type === "application/pdf") {
+    const result = await pdf(buffer);
+    text = result.text;
+  } 
+  
+  else if (
+    file.type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    const result = await mammoth.extractRawText({ buffer });
+    text = result.value;
+  }
+    console.log(text);
 
     if (!text) {
       // Handle extraction failures or empty results
