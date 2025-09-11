@@ -57,7 +57,15 @@ export default function UploadPage() {
       const tasks = await createEvents(text);
       setTasks(tasks);
     } catch (error: any) {
-      setError(error.message);
+      console.error(error.message as string);
+      toast("Error",{
+        description: error.message as string,
+        duration: 5000,
+        action: {
+          label: "Close",
+          onClick: ()=> console.log()
+        }
+      })
     } finally {
       setLoading(false);
     }
@@ -75,9 +83,16 @@ export default function UploadPage() {
         `✅ Successfully added ${events.length} events to Google Calendar!`
       );
       setCalendarLink("https://calendar.google.com/calendar/u/0/r"); // direct calendar link
-    } catch (err: any) {
-      setCalendarMessage(`❌ Error: ${err.message}`);
-      setError(err.message);
+    } catch (error: any) {
+      toast("Error",{
+        description: error.message as string,
+        duration: 5000,
+        action: {
+          label: "Close",
+          onClick: ()=> console.log()
+        }
+      })
+      console.error(error.message as string)
     } finally {
       setCalendarLoading(false);
     }
