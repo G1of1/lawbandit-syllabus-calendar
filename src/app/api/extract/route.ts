@@ -9,7 +9,7 @@ export const runtime = "nodejs"; // ensure we get full Node.js APIs on Vercel
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    message: "Extract API is up. Use POST with form-data 'file'.",
+    message: "Extract API is up.",
   });
 }
 
