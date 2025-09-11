@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import pdf from "pdf-parse";
 import mammoth from "mammoth";
 
+export const runtime = "nodejs"; // ensure we get full Node.js APIs on Vercel
+
+
 export async function POST(req: NextRequest) {
   try {
     // Parse form-data and retrieve the uploaded file
