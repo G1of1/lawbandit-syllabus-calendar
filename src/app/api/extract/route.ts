@@ -1,56 +1,58 @@
 // /app/api/extract/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import pdf from "pdf-parse";
 import mammoth from "mammoth";
 
 export const runtime = "nodejs"; // ensure we get full Node.js APIs on Vercel
 
+// Health check for GET requests
+export async function GET() {
+  return NextResponse.json({
+    status: "ok",
+    message: "Extract API is up. Use POST with form-data 'file'.",
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse form-data and retrieve the uploaded file
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
 
     if (!file) {
-      // Reject if no file is included in the request
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Convert the uploaded file into a Node.js Buffer
-     const buffer = Buffer.from(await file.arrayBuffer());
+    // Convert file to Node.js buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     let text = "";
 
-      if (file.type === "application/pdf") {
-    const result = await pdf(buffer);
-    text = result.text;
-  } 
-  
-  else if (
-    file.type ===
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  ) {
-    const result = await mammoth.extractRawText({ buffer });
-    text = result.value;
-  }
-    console.log(text);
-
-    if (!text) {
-      // Handle extraction failures or empty results
+    if (file.type === "application/pdf") {
+      const result = await pdf(buffer);
+      text = result.text;
+    } else if (
+      file.type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value || "";
+    } else {
       return NextResponse.json(
-        { error: "Missing syllabus file or error extracting syllabus text." },
+        { error: `Unsupported file type: ${file.type}` },
         { status: 400 }
       );
     }
 
-    // Return extracted text as JSON
-    return NextResponse.json(text, { status: 200 });
+    if (!text.trim()) {
+      return NextResponse.json(
+        { error: "Could not extract text from file." },
+        { status: 400 }
+      );
+    }
 
+    return NextResponse.json({ text }, { status: 200 });
   } catch (error: any) {
-    // Catch and report server-side errors
-    console.error(error.message as string);
+    console.error("Extract API error:", error);
     return NextResponse.json(
       { error: `Server Error: ${error.message}` },
       { status: 500 }
