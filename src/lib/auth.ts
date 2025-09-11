@@ -66,5 +66,9 @@ export const authOptions: AuthOptions = {
       session.accessToken = token.accessToken as string;
       return session;
     },
+    async redirect({ url, baseUrl }) {
+    console.log("Redirect attempt:", url, baseUrl);
+    return baseUrl;
+  },
   },
 };
