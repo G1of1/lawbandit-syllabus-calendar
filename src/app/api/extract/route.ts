@@ -1,11 +1,7 @@
 // /app/api/extract/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import pdf from "pdf-parse";
-import mammoth from "mammoth";
-
-export const runtime = "nodejs";       // ensure Node.js runtime
-export const dynamic = "force-dynamic"; // prevent static caching
-
+import mammoth from 'mammoth';
 // Health check
 export async function GET() {
   return NextResponse.json({
@@ -17,7 +13,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file") as File;
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
@@ -26,7 +22,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     let text = "";
-
+    
     try {
       if (file.type === "application/pdf") {
         const result = await pdf(buffer);
@@ -50,7 +46,7 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-
+      
     if (!text.trim()) {
       return NextResponse.json(
         { error: "Could not extract text from file." },

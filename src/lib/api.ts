@@ -46,7 +46,7 @@ export async function extractText(file: File) {
     })
     return;
   }
-  return data;
+  return data.text as string;
 }
 
 

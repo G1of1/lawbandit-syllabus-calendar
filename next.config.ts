@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
     // ❌ Allows production builds to succeed even if there are linting errors
     ignoreDuringBuilds: true,
   },
+  serverExternalPackages: ['pdf-parse', 'mammoth'],
 }
 
 export default nextConfig;

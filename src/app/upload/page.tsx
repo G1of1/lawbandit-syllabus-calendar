@@ -122,7 +122,7 @@ export default function UploadPage() {
             Upload Your Syllabus
           </h1>
           <p className="text-gray-400 text-sm">
-            Upload your PDF or DOCX file. AI will extract important
+            Upload your PDF file. AI will extract important
             dates and tasks, and you can sync them with Google Calendar.
           </p>
 
