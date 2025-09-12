@@ -51,14 +51,23 @@ export default function UploadPage() {
         })
         return;
       }
-        
-      const text = await extractText(file as File);
-      if (!text) return;
+      console.log(file);
+      const text = await extractText(file as File) as string;
+      if (!text) {
+        toast("Error ❌", {
+          description: "Couldn't parse text",
+          duration: 7000
+        })
+        console.error("Couldn't parse text");
+        return;
+      }
+      console.log(text);
       const tasks = await createEvents(text);
+      console.log(tasks);
       setTasks(tasks);
     } catch (error: any) {
       console.error(error.message as string);
-      toast("Error",{
+      toast("Error ❌",{
         description: error.message as string,
         duration: 5000,
         action: {

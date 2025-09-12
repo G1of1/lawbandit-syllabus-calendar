@@ -3,52 +3,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-/**
- * API Route: /api/create-events
- *
- * This endpoint accepts syllabus text (via multipart/form-data),
- * sends it to Google Gemini for parsing, and returns structured
- * syllabus events as JSON.
- *
- * Expected schema:
- * [
- *   {
- *     "title": string,
- *     "date": "YYYY-MM-DD",
- *     "description": string
- *   }
- * ]
- *
- * Example request:
- * POST /api/create-events
- * Content-Type: multipart/form-data
- *
- * text=Week 1: Case Brief due 2025-09-10
- *
- * Example success response:
- * [
- *   {
- *     "title": "Case Brief",
- *     "date": "2025-09-10",
- *     "description": "Week 1 reading and case analysis"
- *   }
- * ]
- */
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
-/**
- * Handles POST requests for syllabus parsing.
- *
- * @param req - The Next.js API request object.
- * @returns {NextResponse} JSON response containing structured events or error details.
- */
+
 export async function POST(req: NextRequest) {
   try {
     // Extract form-data and read syllabus text
-    const formdata = await req.formData();
-    const text = formdata.get("text") as string;
-
+    const { text } = await req.json();
+    console.log('create-events route: ', text)
     // Prompt instructs Gemini to output ONLY valid JSON
     const prompt = `
 You are a scheduling assistant that turns a law school syllabus into structured calendar tasks.
@@ -117,19 +80,20 @@ INPUT SYLLABUS TEXT
       model: "gemini-2.5-flash",
       contents: prompt,
     });
-
     // Gemini sometimes wraps JSON in ```json ... ```
     let responseText = response.text as string;
+    console.log('Response Text:', responseText);
     responseText = responseText
       .replace(/```json\s*/i, "")
       .replace(/```$/, "")
       .trim();
 
+    console.log('Response Text', responseText);
     let events;
 
     try {
       // Attempt to parse Gemini’s output into JSON
-      events = JSON.parse(responseText as string);
+      events = JSON.parse(responseText);
     } catch (error: any) {
       console.log(error.message as string);
       return NextResponse.json(
@@ -137,6 +101,8 @@ INPUT SYLLABUS TEXT
         { status: 500 }
       );
     }
+
+    console.log('Events:', events);
 
     // Successfully return structured events
     return NextResponse.json(events, { status: 200 });

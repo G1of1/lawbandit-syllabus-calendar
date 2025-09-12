@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import pdf from "pdf-parse";
 import mammoth from "mammoth";
 
-export const runtime = "nodejs"; // ensure we get full Node.js APIs on Vercel
+export const runtime = "nodejs";       // ensure Node.js runtime
+export const dynamic = "force-dynamic"; // prevent static caching
 
-// Health check for GET requests
+// Health check
 export async function GET() {
   return NextResponse.json({
     status: "ok",
@@ -17,29 +18,36 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Convert file to Node.js buffer
+    // Convert file to Buffer for Node libraries
     const buffer = Buffer.from(await file.arrayBuffer());
 
     let text = "";
 
-    if (file.type === "application/pdf") {
-      const result = await pdf(buffer);
-      text = result.text;
-    } else if (
-      file.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-      const result = await mammoth.extractRawText({ buffer });
-      text = result.value || "";
-    } else {
+    try {
+      if (file.type === "application/pdf") {
+        const result = await pdf(buffer);
+        text = result.text;
+      } else if (
+        file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value || "";
+      } else {
+        return NextResponse.json(
+          { error: `Unsupported file type: ${file.type}` },
+          { status: 400 }
+        );
+      }
+    } catch (parseErr: any) {
+      console.error("Parsing failed:", parseErr);
       return NextResponse.json(
-        { error: `Unsupported file type: ${file.type}` },
-        { status: 400 }
+        { error: `Parsing failed: ${parseErr.message}` },
+        { status: 500 }
       );
     }
 
@@ -49,7 +57,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
     return NextResponse.json({ text }, { status: 200 });
   } catch (error: any) {
     console.error("Extract API error:", error);

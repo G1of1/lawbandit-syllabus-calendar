@@ -18,6 +18,20 @@ export async function extractText(file: File) {
     method: "POST",
     body: formdata,
   });
+
+  if(!res.ok) {
+    const errorText = await res.text();
+    toast("Error ❌",{
+      description: errorText,
+      duration: 7000,
+      action: {
+        label: "Close",
+        onClick: ()=> console.log()
+      }
+    })
+    console.error(`Server Error: ${errorText}`);
+    return;
+  }
   const data = await res.json();
 
   if (data.error) {
@@ -32,31 +46,15 @@ export async function extractText(file: File) {
     })
     return;
   }
-
   return data;
 }
 
-/**
- * Send syllabus text to the `/api/create-events` endpoint
- * to generate structured syllabus events using Gemini.
- *
- * @param text - The raw syllabus text to be processed.
- * @returns {Promise<any>} JSON response containing extracted events or error details.
- *
- * Example:
- * ```ts
- * const syllabusText = "Week 1: Case Brief due 2025-09-10";
- * const events = await createEvents(syllabusText);
- * console.log(events);
- * ```
- */
-export const createEvents = async (text: string) => {
-  const formdata = new FormData();
-  formdata.append("text", text);
 
+export const createEvents = async (text: string) => {
   const res = await fetch(`/api/create-events`, {
     method: "POST",
-    body: formdata,
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text})
   });
 
   const data = await res.json();
