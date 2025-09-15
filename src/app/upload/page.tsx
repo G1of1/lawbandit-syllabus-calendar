@@ -1,4 +1,3 @@
-//TODO: Include times for certain events, and also fix prompt for model
 "use client";
 
 import { useState } from "react";
@@ -6,32 +5,35 @@ import { useSession } from "next-auth/react";
 import { addEventToGoogleCalendar, createEvents, extractText } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Loader2, Upload, CalendarPlus, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { Task } from "@/types/type";
-
+import { handleSave } from "@/lib/db";
 
 export default function UploadPage() {
   const { data: session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [error, setError] = useState("");
   const [calendarMessage, setCalendarMessage] = useState("");
   const [calendarLink, setCalendarLink] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+
+  const notify = {
+    info: (msg: string) => toast.info(msg),
+    success: (msg: string) => toast.success(`✅ ${msg}`),
+    error: (msg: string) => toast.error(`❌ ${msg}`),
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (e.target.files?.[0]) {
-    const file = e.target.files[0];
-    setFile(file);
-    toast("📂 File Uploaded", {
-      description: file.name,
-      action: {
-        label: "Close",
-        onClick: () => console.log("Toast closed"),
-      },
-    });
-  }
-};
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0];
+      setFile(file);
+      notify.info(`📝 File Uploaded: ${file.name}`);
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -39,44 +41,37 @@ export default function UploadPage() {
     setTasks([]);
     setCalendarMessage("");
     setCalendarLink(null);
+
     try {
       if (!file) {
-        toast("Error ❌", {
-          description: 'No file provided',
-          duration: 5000,
-          action: {
-            label: "Close",
-            onClick: ()=> console.log()
-          }
-        })
+        notify.error("No file provided");
         return;
       }
-      console.log(file);
-      const text = await extractText(file as File) as string;
+
+      const text = (await extractText(file as File)) as string;
       if (!text) {
-        toast("Error ❌", {
-          description: "Couldn't parse text",
-          duration: 7000
-        })
-        console.error("Couldn't parse text");
+        notify.error("Couldn't parse text");
         return;
       }
-      console.log(text);
+
       const tasks = await createEvents(text);
-      console.log(tasks);
       setTasks(tasks);
     } catch (error: any) {
-      console.error(error.message as string);
-      toast("Error ❌",{
-        description: error.message as string,
-        duration: 5000,
-        action: {
-          label: "Close",
-          onClick: ()=> console.log()
-        }
-      })
+      notify.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveTasks = async () => {
+    try {
+      setAssignmentLoading(true);
+      await handleSave(tasks);
+      notify.success("Assignments saved!");
+    } catch {
+      notify.error("Error saving assignments");
+    } finally {
+      setAssignmentLoading(false);
     }
   };
 
@@ -86,57 +81,52 @@ export default function UploadPage() {
     setCalendarMessage("");
     setCalendarLink(null);
     setError("");
+
     try {
       const events = await addEventToGoogleCalendar(tasks);
-      setCalendarMessage(
-        `✅ Successfully added ${events.length} events to Google Calendar!`
-      );
-      setCalendarLink("https://calendar.google.com/calendar/u/0/r"); // direct calendar link
+      notify.success(`All ${events.length} assignments added to Google Calendar`);
+      setCalendarLink("https://calendar.google.com/calendar/u/0/r");
     } catch (error: any) {
-      toast("Error",{
-        description: error.message as string,
-        duration: 5000,
-        action: {
-          label: "Close",
-          onClick: ()=> console.log()
-        }
-      })
-      console.error(error.message as string)
+      notify.error("Error adding assignments to Google Calendar...");
     } finally {
       setCalendarLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen p-6 text-white">
-      <div className="mx-auto max-w-2xl space-y-8">
+    <div className="min-h-screen p-6 text-white flex items-center justify-center">
+      <div className="w-full max-w-3xl space-y-8">
         {/* Upload Form */}
         <motion.form
           onSubmit={handleUpload}
-          className="space-y-4 rounded-xl border border-gray-700 bg-[#1e1c1a] p-6 shadow-md"
-          initial={{ opacity: 0, y: 10 }}
+          className="w-full space-y-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-gray-700 p-8 shadow-xl"
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.4 }}
         >
-          <h1 className="text-2xl font-bold text-white">
-            Upload Your Syllabus
-          </h1>
-          <p className="text-gray-400 text-sm">
-            Upload your PDF file. AI will extract important
-            dates and tasks, and you can sync them with Google Calendar.
+          <h1 className="text-3xl font-bold text-center">Upload Your Syllabus</h1>
+          <p className="text-gray-300 text-center">
+            Upload your syllabus as a <span className="font-semibold">PDF</span> or{" "}
+            <span className="font-semibold">DOCX</span>, and let AI do the heavy lifting. It
+            will extract deadlines and assignments, and you can{" "}
+            <span className="text-indigo-400">sync them with Google Calendar</span> so you
+            never miss a deadline again.
           </p>
 
           <input
             type="file"
             name="file"
             accept=".pdf,.docx"
-            className="block w-full rounded-full border border-gray-600 bg-[#2a2725] p-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-lg border border-gray-600 bg-[#2a2725] p-3 text-sm text-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
             onChange={handleFileChange}
           />
-          <button
+
+          <motion.button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 px-4 py-2 font-medium text-[#2a2725] cursor-pointer shadow hover:bg-gray-300 disabled:opacity-50 active:scale-90"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-6 py-3 font-medium text-black shadow hover:bg-gray-500 disabled:opacity-50 active:scale-95 transition"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             {loading ? (
               <>
@@ -147,89 +137,80 @@ export default function UploadPage() {
                 <Upload className="h-5 w-5" /> Upload Syllabus
               </>
             )}
-          </button>
+          </motion.button>
         </motion.form>
-
-        {/* Error Message */}
-        {error && (
-          <motion.p
-            className="text-red-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {error}
-          </motion.p>
-        )}
 
         {/* Parsed Tasks */}
         {tasks.length > 0 && (
-  <motion.div
-    className="space-y-4 rounded-xl border border-gray-700 bg-[#1e1c1a] p-6 shadow-md"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-  >
-    <h2 className="text-xl font-semibold text-gray-100">
-      Extracted Tasks
-    </h2>
+          <motion.div
+            className="space-y-6 rounded-2xl border border-gray-700 bg-white/10 backdrop-blur-lg p-8 shadow-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <h2 className="text-2xl font-semibold text-gray-100">Extracted Assignments</h2>
 
-    {/* Horizontal scrollable grid */}
-    <div className="grid grid-flow-col auto-cols-[250px] gap-4 overflow-x-auto pb-4">
-      {tasks.map((task, idx) => (
-        <motion.div
-          key={idx}
-          className="rounded-lg border border-gray-700 bg-[#2a2725] p-4 flex-shrink-0"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: idx * 0.05 }}
-        >
-          <p className="font-semibold text-white">{task.title}</p>
-          <p className="text-sm text-gray-400">{task.date}</p>
-          <p className="text-sm text-gray-300">{task.description}</p>
-        </motion.div>
-      ))}
-    </div>
+            {/* Horizontal scrollable grid */}
+            <div className="grid grid-flow-col auto-cols-[250px] gap-4 overflow-x-auto pb-4">
+              {tasks.map((task, idx) => (
+                <motion.div
+                  key={idx}
+                  className="rounded-lg border border-gray-700 bg-[#2a2725] p-4 flex-shrink-0 shadow hover:shadow-lg transition"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <p className="font-semibold text-white">{task.title}</p>
+                  <p className="text-sm text-gray-400">{task.date}</p>
+                  <p className="text-sm text-gray-300">{task.description}</p>
+                </motion.div>
+              ))}
+            </div>
 
-    {/* Add to Calendar Button */}
-    <button
-      onClick={handleAddToCalendar}
-      disabled={calendarLoading}
-      className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white shadow hover:bg-indigo-700 disabled:opacity-50"
-    >
-      {calendarLoading ? (
-        <>
-          <Loader2 className="h-5 w-5 animate-spin" /> Adding to Google Calendar...
-        </>
-      ) : (
-        <>
-          <CalendarPlus className="h-5 w-5" /> Add All to Google Calendar
-        </>
-      )}
-    </button>
+            {/* Save + Calendar Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <motion.button
+                onClick={handleSaveTasks}
+                disabled={assignmentLoading}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-6 py-3 font-medium text-white shadow hover:bg-green-700 disabled:opacity-50"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {assignmentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save Assignments"}
+              </motion.button>
 
-    {calendarMessage && (
-      <motion.p
-        className="mt-2 text-green-400"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        {calendarMessage}
-      </motion.p>
-    )}
+              <motion.button
+                onClick={handleAddToCalendar}
+                disabled={calendarLoading}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white shadow hover:bg-indigo-700 disabled:opacity-50"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {calendarLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" /> Adding to Google Calendar...
+                  </>
+                ) : (
+                  <>
+                    <CalendarPlus className="h-5 w-5" /> Add All to Google Calendar
+                  </>
+                )}
+              </motion.button>
+            </div>
 
-    {calendarLink && (
-      <motion.a
-        href={calendarLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 flex items-center justify-center gap-2 text-blue-400 hover:underline"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <ExternalLink className="h-4 w-4" /> Open Google Calendar
-      </motion.a>
-    )}
-  </motion.div>
-)}
+            {calendarLink && (
+              <motion.a
+                href={calendarLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 flex items-center justify-center gap-2 text-indigo-400 hover:underline"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <ExternalLink className="h-4 w-4" /> Open Google Calendar
+              </motion.a>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );
