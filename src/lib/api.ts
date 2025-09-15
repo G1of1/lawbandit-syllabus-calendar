@@ -1,7 +1,5 @@
 import { Task } from "@/types/type";
 import { getSession } from "next-auth/react";
-import { toast } from 'sonner';
-
 /**
  * @file client-api.ts
  * @description
@@ -21,14 +19,6 @@ export async function extractText(file: File) {
 
   if(!res.ok) {
     const errorText = await res.text();
-    toast("Error ❌",{
-      description: errorText,
-      duration: 7000,
-      action: {
-        label: "Close",
-        onClick: ()=> console.log()
-      }
-    })
     console.error(`Server Error: ${errorText}`);
     return;
   }
@@ -36,14 +26,6 @@ export async function extractText(file: File) {
 
   if (data.error) {
     console.error(data.error);
-    toast("Error",{
-      description: data.error as string,
-      duration: 7000,
-      action: {
-        label: "Close",
-        onClick: ()=> console.log()
-      }
-    })
     return;
   }
   return data.text as string;
@@ -61,14 +43,6 @@ export const createEvents = async (text: string) => {
 
   if (data.error) {
     console.error(data.error);
-    toast("Error",{
-      description: data.error as string,
-      duration: 7000,
-      action: {
-        label: "Close",
-        onClick: ()=> console.log()
-      }
-    })
     return;
   }
 
@@ -95,14 +69,8 @@ export const addEventToGoogleCalendar = async (events: Task[]) => {
 
     const data = await res.json();
     if (data.error) {
-      toast("Error",{
-      description: data.error as string,
-      duration: 7000,
-      action: {
-        label: "Close",
-        onClick: ()=> console.log()
-      }
-    })
+    console.error(`Error: ${data.error}`)
+    return;
     }
     return data;
   };
