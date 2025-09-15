@@ -4,17 +4,40 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [loading, setLoading] = useState<boolean>(false);
 
   if (status === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center from-[rgb(23_21_20/var(--tw-bg-opacity))] to-[#1e1c1a]">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      <main className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-25 w-25 animate-spin text-white" />
       </main>
     );
+  }
+
+  const handleRoute = (route: string) => {
+    try {
+      setLoading(true);
+      router.push(route);
+    }
+    catch(error) {
+      console.error(error);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
+
+  if(loading) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center">
+        <Loader2 className="h-15 w-15 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -26,7 +49,7 @@ export default function HomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <span className="text-white"><img src="icons/lawbandit.svg"/>SyllaSync</span>
+        <span className="text-white"><img src="icons/lawbandit.svg" className="scale-50 m-4"/>SyllaSync</span>
       </motion.div>
 
       {/* Subheading */}
@@ -49,10 +72,10 @@ export default function HomePage() {
         {session ? (
           <>
             <button
-              onClick={() => router.push("/upload")}
+              onClick={() => handleRoute('/upload')}
               className="rounded-full bg-white px-8 py-3 text-md font-medium text-black shadow-lg transition cursor-pointer hover:bg-gray-500 active:scale-90"
             >
-              Go to Upload
+              {loading ? <Loader2 className="animate-spin w-5 h-5" /> : "Go to Upload"}
             </button>
             <button
               onClick={() => signOut()}
