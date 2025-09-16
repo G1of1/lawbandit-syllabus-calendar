@@ -18,11 +18,14 @@ export const authOptions: AuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
       // Initial sign in
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
+        if (profile) {
+          token.sub = profile.sub;
+        }
         // ✅ Google gives expires_at in seconds since epoch
         token.expiresAt = account.expires_at ? account.expires_at * 1000 : undefined;
         return token;
@@ -64,6 +67,7 @@ export const authOptions: AuthOptions = {
 
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
+      session.user.id = token.sub!;
       return session;
     },
     async redirect({ url, baseUrl }) {

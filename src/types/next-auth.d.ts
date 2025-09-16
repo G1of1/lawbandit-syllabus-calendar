@@ -5,6 +5,12 @@ import { JWT } from "next-auth/jwt";
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
   }
 
   export interface Account {
@@ -14,6 +20,9 @@ declare module "next-auth" {
     token_type?: string;
     id_token?: string;
     scope?: string;
+  }
+  interface User {
+    id: string;
   }
 }
 

@@ -15,10 +15,10 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [calendarMessage, setCalendarMessage] = useState("");
   const [calendarLink, setCalendarLink] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+
+  const userID = session?.user.id;
 
   const notify = {
     info: (msg: string) => toast.info(msg),
@@ -37,9 +37,7 @@ export default function UploadPage() {
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     setTasks([]);
-    setCalendarMessage("");
     setCalendarLink(null);
 
     try {
@@ -66,7 +64,7 @@ export default function UploadPage() {
   const handleSaveTasks = async () => {
     try {
       setAssignmentLoading(true);
-      await handleSave(tasks);
+      await handleSave(tasks, userID as string);
       notify.success("Assignments saved!");
     } catch {
       notify.error("Error saving assignments");
@@ -78,10 +76,7 @@ export default function UploadPage() {
   const handleAddToCalendar = async () => {
     if (!tasks.length || !session) return;
     setCalendarLoading(true);
-    setCalendarMessage("");
     setCalendarLink(null);
-    setError("");
-
     try {
       const events = await addEventToGoogleCalendar(tasks);
       notify.success(`All ${events.length} assignments added to Google Calendar`);

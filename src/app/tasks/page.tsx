@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Download, Loader2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { addEventToGoogleCalendar } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 type SortOption = "name" | "date";
 
@@ -14,6 +15,8 @@ export default function TasksPage() {
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const { data: session } = useSession();
+  const userID = session?.user.id;
 
   // Modal state
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -22,7 +25,7 @@ export default function TasksPage() {
     (async () => {
       try {
         setLoading(true);
-        const data = await getTasks();
+        const data = await getTasks(userID as string);
         setTasks(data as Task[]);
       } catch (err) {
         console.error(err);
@@ -35,7 +38,7 @@ export default function TasksPage() {
   const handleDelete = async (id: number) => {
     try {
       setDeletingId(id);
-      await deleteTask(id);
+      await deleteTask(id, userID as string);
       setTasks((prev) => prev.filter((task) => task.id !== id));
       toast.success("✅ Assignment deleted");
     } catch (err) {
