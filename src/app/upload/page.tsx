@@ -9,23 +9,50 @@ import { toast } from "react-toastify";
 import { Task } from "@/types/type";
 import { handleSave } from "@/lib/db";
 
+/**
+ * UploadPage
+ * ----------
+ * Client-side page where users upload a syllabus (PDF or DOCX).
+ * Flow:
+ * 1. Upload syllabus file
+ * 2. Extract text content (via /api/extract)
+ * 3. Parse text into structured assignments (via /api/create-events)
+ * 4. Display assignments in scrollable cards
+ * 5. User can:
+ *    - Save assignments to database
+ *    - Sync assignments with Google Calendar
+ *
+ * Key Integrations:
+ * - next-auth for session / userID
+ * - toast notifications for UX feedback
+ * - framer-motion for animations
+ * - Google Calendar API via helper function
+ */
 export default function UploadPage() {
   const { data: session } = useSession();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [assignmentLoading, setAssignmentLoading] = useState(false);
-  const [calendarLoading, setCalendarLoading] = useState(false);
-  const [calendarLink, setCalendarLink] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+
+  // State
+  const [tasks, setTasks] = useState<Task[]>([]);          // Extracted assignments
+  const [loading, setLoading] = useState(false);           // Upload + parse loading
+  const [assignmentLoading, setAssignmentLoading] = useState(false); // Save button loading
+  const [calendarLoading, setCalendarLoading] = useState(false);     // Calendar sync loading
+  const [calendarLink, setCalendarLink] = useState<string | null>(null); // Link to Google Calendar after sync
+  const [file, setFile] = useState<File | null>(null);     // Uploaded syllabus file
 
   const userID = session?.user.id;
 
+  // Toast shorthand helpers
   const notify = {
     info: (msg: string) => toast.info(msg),
     success: (msg: string) => toast.success(`✅ ${msg}`),
     error: (msg: string) => toast.error(`❌ ${msg}`),
   };
 
+  /**
+   * Handle file selection
+   * - Stores file in state
+   * - Fires toast to confirm upload
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
@@ -34,6 +61,12 @@ export default function UploadPage() {
     }
   };
 
+  /**
+   * Upload form submit handler
+   * - Sends file to /api/extract → extracts syllabus text
+   * - Sends text to /api/create-events → parses into structured tasks
+   * - Updates UI with parsed tasks
+   */
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -46,12 +79,14 @@ export default function UploadPage() {
         return;
       }
 
+      // Step 1: Extract raw text from syllabus
       const text = (await extractText(file as File)) as string;
       if (!text) {
         notify.error("Couldn't parse text");
         return;
       }
 
+      // Step 2: Generate structured assignments from syllabus text
       const tasks = await createEvents(text);
       setTasks(tasks);
     } catch (error: any) {
@@ -61,6 +96,10 @@ export default function UploadPage() {
     }
   };
 
+  /**
+   * Save parsed tasks to database
+   * Uses helper `handleSave` which stores tasks linked to userID
+   */
   const handleSaveTasks = async () => {
     try {
       setAssignmentLoading(true);
@@ -73,6 +112,11 @@ export default function UploadPage() {
     }
   };
 
+  /**
+   * Sync assignments to Google Calendar
+   * - Uses Google Calendar API helper
+   * - Returns a link to the user’s calendar once done
+   */
   const handleAddToCalendar = async () => {
     if (!tasks.length || !session) return;
     setCalendarLoading(true);
@@ -91,7 +135,9 @@ export default function UploadPage() {
   return (
     <div className="min-h-screen p-6 text-white flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-8">
-        {/* Upload Form */}
+        {/* =====================
+            Upload Form
+        ====================== */}
         <motion.form
           onSubmit={handleUpload}
           className="w-full space-y-6 rounded-2xl bg-white/10 backdrop-blur-lg border border-gray-700 p-8 shadow-xl"
@@ -102,12 +148,13 @@ export default function UploadPage() {
           <h1 className="text-3xl font-bold text-center">Upload Your Syllabus</h1>
           <p className="text-gray-300 text-center">
             Upload your syllabus as a <span className="font-semibold">PDF</span> or{" "}
-            <span className="font-semibold">DOCX</span>, and let AI do the heavy lifting. It
-            will extract deadlines and assignments, and you can{" "}
+            <span className="font-semibold">DOCX</span>, and let AI do the heavy lifting.
+            It will extract deadlines and assignments, and you can{" "}
             <span className="text-indigo-400">sync them with Google Calendar</span> so you
             never miss a deadline again.
           </p>
 
+          {/* File input */}
           <input
             type="file"
             name="file"
@@ -116,6 +163,7 @@ export default function UploadPage() {
             onChange={handleFileChange}
           />
 
+          {/* Upload button */}
           <motion.button
             type="submit"
             disabled={loading}
@@ -135,7 +183,9 @@ export default function UploadPage() {
           </motion.button>
         </motion.form>
 
-        {/* Parsed Tasks */}
+        {/* =====================
+            Parsed Assignments
+        ====================== */}
         {tasks.length > 0 && (
           <motion.div
             className="space-y-6 rounded-2xl border border-gray-700 bg-white/10 backdrop-blur-lg p-8 shadow-xl"
@@ -144,7 +194,7 @@ export default function UploadPage() {
           >
             <h2 className="text-2xl font-semibold text-gray-100">Extracted Assignments</h2>
 
-            {/* Horizontal scrollable grid */}
+            {/* Scrollable cards list */}
             <div className="grid grid-flow-col auto-cols-[250px] gap-4 overflow-x-auto pb-4">
               {tasks.map((task, idx) => (
                 <motion.div
@@ -161,8 +211,9 @@ export default function UploadPage() {
               ))}
             </div>
 
-            {/* Save + Calendar Buttons */}
+            {/* Save + Calendar buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
+              {/* Save to DB */}
               <motion.button
                 onClick={handleSaveTasks}
                 disabled={assignmentLoading}
@@ -173,6 +224,7 @@ export default function UploadPage() {
                 {assignmentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save Assignments"}
               </motion.button>
 
+              {/* Sync to Google Calendar */}
               <motion.button
                 onClick={handleAddToCalendar}
                 disabled={calendarLoading}
@@ -192,6 +244,7 @@ export default function UploadPage() {
               </motion.button>
             </div>
 
+            {/* Calendar link after sync */}
             {calendarLink && (
               <motion.a
                 href={calendarLink}

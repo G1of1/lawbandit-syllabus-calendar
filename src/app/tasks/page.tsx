@@ -10,16 +10,36 @@ import { useSession } from "next-auth/react";
 
 type SortOption = "name" | "date";
 
+/**
+ * 📄 TasksPage Component
+ *
+ * Displays a list of saved assignments for the logged-in user.
+ * Features:
+ *  - Fetch and display tasks from database
+ *  - Sort (by date or name)
+ *  - Search/filter tasks
+ *  - Delete tasks (with confirmation modal)
+ *  - Sync individual tasks with Google Calendar
+ *  - Status badges: Overdue, Due Today, Due Soon
+ *
+ * UI/UX:
+ *  - Uses Framer Motion for smooth animations
+ *  - Toast notifications for success/error feedback
+ *  - Confirmation modal before deleting tasks
+ */
 export default function TasksPage() {
+  // -------------------- State --------------------
   const [tasks, setTasks] = useState<Task[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [search, setSearch] = useState("");
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmId, setConfirmId] = useState<number | null>(null); // 👈 for modal
+  const [deletingId, setDeletingId] = useState<number | null>(null); // loading state for task actions
+  const [confirmId, setConfirmId] = useState<number | null>(null);   // task pending deletion (modal open)
   const [loading, setLoading] = useState<boolean>(false);
+
   const { data: session } = useSession();
   const userID = session?.user.id;
 
+  // -------------------- Fetch tasks on mount --------------------
   useEffect(() => {
     (async () => {
       try {
@@ -34,6 +54,7 @@ export default function TasksPage() {
     })();
   }, []);
 
+  // -------------------- Delete a task --------------------
   const handleDelete = async (id: number) => {
     try {
       setDeletingId(id);
@@ -45,10 +66,11 @@ export default function TasksPage() {
       toast.error("❌ Error deleting assignment");
     } finally {
       setDeletingId(null);
-      setConfirmId(null);
+      setConfirmId(null); // close modal
     }
   };
 
+  // -------------------- Sync with Google Calendar --------------------
   const addToGoogleCalendar = async (tasks: Task[], id: number) => {
     try {
       setDeletingId(id);
@@ -61,6 +83,7 @@ export default function TasksPage() {
     }
   };
 
+  // -------------------- Sorting & Filtering --------------------
   const sortedTasks = [...tasks].sort((a, b) => {
     if (sortBy === "name") {
       return a.title.localeCompare(b.title);
@@ -75,6 +98,8 @@ export default function TasksPage() {
     task.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  // -------------------- Helpers --------------------
+  // Calculate days left until due date
   const getDaysLeft = (date: string) => {
     const today = new Date();
     const due = new Date(date);
@@ -84,12 +109,14 @@ export default function TasksPage() {
     return diff;
   };
 
+  // Badge color based on urgency
   const getBadgeColor = (daysLeft: number) => {
-    if (daysLeft < 0) return "bg-red-500 text-white"; // overdue
+    if (daysLeft < 0) return "bg-red-500 text-white";   // overdue
     if (daysLeft <= 3) return "bg-yellow-500 text-black"; // urgent
-    return "bg-green-500 text-white"; // safe
+    return "bg-green-500 text-white";                   // safe
   };
 
+  // -------------------- Loading State --------------------
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -98,6 +125,7 @@ export default function TasksPage() {
     );
   }
 
+  // -------------------- Render --------------------
   return (
     <div>
       <h1 className="text-2xl font-bold mb-2">Saved Assignments</h1>
@@ -106,7 +134,7 @@ export default function TasksPage() {
         Calendar.
       </h3>
 
-      {/* Search + Sort Controls */}
+      {/* 🔍 Search + Sort Controls */}
       <div className="mb-4 flex flex-col md:flex-row gap-4 md:items-center">
         <input
           type="text"
@@ -133,6 +161,7 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {/* 📋 Task List */}
       {filteredTasks.length > 0 ? (
         <motion.div layout>
           <AnimatePresence>
@@ -148,6 +177,7 @@ export default function TasksPage() {
                   transition={{ duration: 0.3 }}
                   className="p-4 border rounded mb-2 bg-white text-black shadow flex justify-between items-center"
                 >
+                  {/* Spinner while deleting */}
                   {deletingId === task.id ? (
                     <div className="flex flex-1 items-center justify-center">
                       <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
@@ -173,10 +203,10 @@ export default function TasksPage() {
                     </div>
                   )}
 
-                  {/* Actions */}
+                  {/* ⚡ Actions: Delete + Sync */}
                   <div className="flex gap-3">
                     <motion.button
-                      onClick={() => setConfirmId(task.id)} // 👈 open modal
+                      onClick={() => setConfirmId(task.id)} // open modal
                       disabled={deletingId === task.id}
                       className="text-red-500 hover:text-red-700 cursor-pointer disabled:opacity-50"
                       whileHover={{ scale: 1.2 }}
@@ -209,7 +239,7 @@ export default function TasksPage() {
         </motion.div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* 🗑️ Confirmation Modal */}
       <AnimatePresence>
         {confirmId !== null && (
           <motion.div
